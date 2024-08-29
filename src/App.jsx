@@ -1,59 +1,59 @@
-import { useEffect, useState } from 'react'
-import './App.css'
+import  { useEffect, useRef, useState } from "react";
+import { useReactToPrint } from "react-to-print";
+import axios from "axios";
+import BillReceipt from "./BillReceipt";
+import "./App.css";
 
-function App() {
-
-  const [users, setUsers] = useState([]);
+const App = () => {
+  const [data, setData] = useState([]);
+  const receiptRef = useRef();
 
   useEffect(() => {
-    fetch('http://localhost:5000/users')
-      .then(res => res.json())
-      .then(data => setUsers(data));
-  }, [])
-
-
-  const handleAddUser = event => {
-    event.preventDefault();
-    const form = event.target;
-    const name = form.name.value;
-    const email = form.email.value;
-    const user = { name, email }
-    console.log(user);
-    
-    fetch('http://localhost:5000/users', {
-      method: 'POST',
-      headers: {
-        'content-type': 'application/json'
-      },
-      body: JSON.stringify(user)
-    })
-      .then(res => res.json())
-      .then(data => {
-        console.log(data);
-        const newUsers = [...users, data]
-        setUsers(newUsers);
-        form.reset();
+    axios
+      .get("https://api.ownfood.com.bd/api/v1/get-single-orders/66b34e7c31c565578a494692")
+      .then((response) => {
+        if (response.data.status === "Success") {
+          setData(response.data.data);
+        }
       })
-  }
+      .catch((error) => {
+        console.error("Error fetching data:", error);
+      });
+  }, []);
+
+
+  const handlePrintMini = useReactToPrint({
+    content: () => receiptRef.current,
+    pageStyle: `
+      @media print {
+        @page { size: 80mm 200mm; margin: 0; }
+        body { margin: 0; }
+        .receipt {
+          font-size: 10px; /* Adjust font size for smaller print */
+        }
+      }
+    `,
+  });
+  
+  const handlePrintA4 = useReactToPrint({
+    content: () => receiptRef.current,
+    pageStyle: `
+      @media print {
+        @page { size: A4; margin: 20mm; }
+        body { margin: 0; }
+      }
+    `,
+  });
+  
+
 
   return (
-    <>
-      <h1>Users Management System</h1>
-      <h3>Numbers of Users: {users.length}</h3>
-      <form onSubmit={handleAddUser}>
-        <input type="text" name="name" id="" />
-        <br />
-        <input type="email" name="email" id="" />
-        <br />
-        <input type="submit" value="Add User" />
-      </form>
-      <div>
-        {
-          users.map(user => <p key={user.id}>{user.id} : {user.name} : {user.email}</p>)
-        }
-      </div>
-    </>
-  )
-}
+    <div>
+      <BillReceipt ref={receiptRef} data={data} />
+      <button onClick={handlePrintMini}>Print Mini PDF</button>
+      <button onClick={handlePrintA4}>Print A4 PDF</button>
+    </div>
+  );
+};
 
-export default App
+export default App;
